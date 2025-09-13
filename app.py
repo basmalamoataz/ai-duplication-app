@@ -12,7 +12,7 @@ nltk.download('punkt', quiet=True)
 # Page config
 # -------------------------------
 st.set_page_config(
-    page_title="AI Duplication Finder",
+    page_title="AI Duplication",
     page_icon="⋆",
     layout="wide"
 )
