@@ -9,11 +9,10 @@ import re
 nltk.download('punkt', quiet=True)
 
 # -------------------------------
-# Page config
+# Page config (Updated)
 # -------------------------------
 st.set_page_config(
-    page_title="AI Duplication",
-    page_icon="logo.png", # Updated to use the local image file
+    page_title="AI Duplication Finder",
     layout="wide"
 )
 
@@ -55,17 +54,27 @@ def find_similar_work_order_pairs(df, model):
     pm_number_column = "PM Number"
     statuses_to_exclude = ["COMP", "CAN"]
     similarity_threshold = 0.75
-    if status_column in df.columns: df[status_column] = df[status_column].astype(str)
+
+    if status_column in df.columns:
+        df[status_column] = df[status_column].astype(str)
+
     filtered_df = df
-    if status_column in df.columns: filtered_df = df[~df[status_column].isin(statuses_to_exclude)]
+    if status_column in df.columns:
+        filtered_df = df[~df[status_column].isin(statuses_to_exclude)]
+    
     if pm_number_column in filtered_df.columns:
         filtered_df[pm_number_column] = filtered_df[pm_number_column].astype(str)
-        filtered_df = filtered_df[filtered_df[pm_number_column].isnull() | (filtered_df[pm_number_column] == 'nan')].copy()
+        filtered_df = filtered_df[
+            filtered_df[pm_number_column].isnull() | (filtered_df[pm_number_column] == 'nan')
+        ].copy()
+    
     results_data = []
     if not {location_column, asset_column}.issubset(filtered_df.columns):
         st.error("Missing required columns for grouping: Location and/or Asset.")
         return pd.DataFrame()
+
     grouped = filtered_df.groupby([location_column, asset_column])
+
     for (location, asset), group_df in grouped:
         if len(group_df) < 2: continue
         sentences_df = group_df.dropna(subset=[desc_column])
@@ -78,9 +87,18 @@ def find_similar_work_order_pairs(df, model):
             for cluster in clusters:
                 for i_pos in range(len(cluster)):
                     for j_pos in range(i_pos + 1, len(cluster)):
-                        idx1, idx2 = cluster[i_pos], cluster[j_pos]
+                        idx1 = cluster[i_pos]
+                        idx2 = cluster[j_pos]
                         score = util.cos_sim(embeddings[idx1], embeddings[idx2])[0, 0].item()
-                        results_data.append({"Similarity Score": f"{score:.4f}", "Work Order 1": work_orders[idx1], "Description 1": sentences[idx1], "Work Order 2": work_orders[idx2], "Description 2": sentences[idx2], "Location": location, "Asset": asset})
+                        results_data.append({
+                            "Similarity Score": f"{score:.4f}",
+                            "Work Order 1": work_orders[idx1],
+                            "Description 1": sentences[idx1],
+                            "Work Order 2": work_orders[idx2],
+                            "Description 2": sentences[idx2],
+                            "Location": location,
+                            "Asset": asset,
+                        })
     if results_data:
         return pd.DataFrame(results_data).sort_values(by="Similarity Score", ascending=False)
     return pd.DataFrame()
@@ -88,13 +106,10 @@ def find_similar_work_order_pairs(df, model):
 # -------------------------------
 # UI Layout (Updated)
 # -------------------------------
-col1, col2 = st.columns([1, 5])
-with col1:
-    # <<< --- THE FIX IS HERE: Using the local logo.png file --- >>>
-    st.image("logo.png", width=150)
-with col2:
-    st.title("AI Duplication Model")
-    st.write("Upload your file to detect duplicate work orders.")
+
+# <<< --- THE CHANGE IS HERE: Removed the columns and st.image for a simpler header --- >>>
+st.title("AI Duplication Model")
+st.write("Upload your file to detect duplicate work orders.")
 st.markdown("---")
 
 model = load_model()
@@ -106,11 +121,18 @@ if uploaded_file is not None and run:
     with st.spinner("Analyzing file..."):
         dataframe = pd.read_excel(uploaded_file)
         results_df = find_similar_work_order_pairs(dataframe, model)
+
     st.success("Analysis Complete!")
+
     if not results_df.empty:
         st.subheader("Found Similarities")
         st.dataframe(results_df, use_container_width=True, hide_index=True)
         csv = results_df.to_csv(index=False).encode("utf-8")
-        st.download_button(label="Download results as CSV", data=csv, file_name="similar_work_orders.csv", mime="text/csv")
+        st.download_button(
+            label="Download results as CSV",
+            data=csv,
+            file_name="similar_work_orders.csv",
+            mime="text/csv",
+        )
     else:
         st.warning("No similar work orders were found.")
