@@ -1,4 +1,4 @@
-
+%%writefile app.py
 import streamlit as st
 import pandas as pd
 import torch
@@ -7,7 +7,6 @@ import nltk
 import io
 import re
 
-
 nltk.download('punkt', quiet=True)
 
 # -------------------------------
@@ -15,7 +14,7 @@ nltk.download('punkt', quiet=True)
 # -------------------------------
 st.set_page_config(
     page_title="AI Duplication",
-    page_icon="logo_colour.png", # Updated to use the image file
+    page_icon="🤖",
     layout="wide"
 )
 
@@ -26,159 +25,68 @@ CUSTOM_CSS = """
 <style>
 /* Global */
 :root{
-  --primary:#3B82F6;         /* blue-500 */
-  --primary-600:#2563EB;     /* blue-600 */
-  --bg:#0b1220;              /* dark navy background */
-  --panel:#121a2b;           /* card background */
-  --text:#E5E7EB;            /* gray-200 */
-  --muted:#9CA3AF;           /* gray-400 */
-  --accent:#10B981;          /* emerald-500 */
-  --danger:#EF4444;          /* red-500 */
-  --radius:14px;
+    --primary:#3B82F6;        /* blue-500 */
+    --primary-600:#2563EB;      /* blue-600 */
+    --bg:#0b1220;              /* dark navy background */
+    --panel:#121a2b;            /* card background */
+    --text:#E5E7EB;             /* gray-200 */
+    --muted:#9CA3AF;            /* gray-400 */
+    --radius:14px;
 }
 
 html, body, [class^="stApp"] {
-  background: radial-gradient(1200px 800px at 10% -20%, rgba(59,130,246,0.12), transparent 60%) ,
-              radial-gradient(1000px 700px at 110% 10%, rgba(16,185,129,0.10), transparent 50%) ,
-              var(--bg);
-  color: var(--text);
-  font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
-}
-
-/* Title */
-h1, h2, h3 {
-  letter-spacing: 0.2px;
-}
-h1 {
-  font-weight: 800;
-  font-size: clamp(28px, 3.2vw, 44px);
-  margin-bottom: 0.4rem;
-}
-p {
-  color: var(--muted);
+    background: var(--bg);
+    color: var(--text);
+    font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
 }
 
 /* Containers (cards) */
 .block-container {
-  padding-top: 1.5rem;
-  max-width: 1200px;
+    padding-top: 1.5rem;
+    max-width: 1200px;
 }
 .stApp > header {background: transparent;}
-/* Make widgets look like cards */
-div[data-testid="stFileUploader"] > section,
+
+/* <<< NEW CSS RULE TO HIDE GITHUB LINK >>> */
+/* This hides the "Made with Streamlit" footer and the source code link */
+.stDeployAttribution {
+    display: none;
+}
+
 div[data-testid="stDataFrame"] {
-  background: var(--panel);
-  border: 1px solid rgba(255,255,255,0.06);
-  box-shadow: 0 10px 30px rgba(0,0,0,0.25);
-  width: 900px;
-  border-radius: var(--radius);
+    background: var(--panel);
+    border: 1px solid rgba(255,255,255,0.06);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+    border-radius: var(--radius);
 }
 
 /* Buttons */
-div[data-testid="stFileUploader"] button {
-  background: var(--panel) !important;   /* dark */
-  color: var(--text) !important;
-  border: 1px solid rgba(255,255,255,0.15) !important;
-  border-radius: 10px !important;
-  padding: 0.6rem 1rem !important;
-  font-weight: 600 !important;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.35) !important;
-  transition: background .2s ease, transform .1s ease;
-}
-
-div[data-testid="stFileUploader"] button:hover {
-  background: rgba(255,255,255,0.1) !important;
-  transform: translateY(-1px);
-}
-
-div[data-testid="stFileUploader"] button:active {
-  background: rgba(255,255,255,0.2) !important;
-  transform: translateY(1px);
-}
-
-/* Start button - blue accent */
 .stButton > button {
-  background: linear-gradient(135deg, var(--primary), var(--primary-600)) !important;
-  color: white !important;
-  border: 0 !important;
-  border-radius: 10px !important;
-  padding: 0.7rem 1.1rem !important;
-  font-weight: 600 !important;
-  transition: transform .05s ease, box-shadow .2s ease, filter .2s ease;
-  box-shadow: 0 10px 20px rgba(37,99,235,0.25) !important;
+    background: linear-gradient(135deg, var(--primary), var(--primary-600));
+    color: white;
+    border: 0;
+    border-radius: 10px;
+    padding: 0.7rem 1.1rem;
+    font-weight: 600;
 }
 
-.stButton > button:hover {
-  filter: brightness(1.08) !important;
-}
-
-.stButton > button:active {
-  transform: translateY(1px) !important;
-}
-
-
-/* File uploader tweaks */
+/* File uploader */
 div[data-testid="stFileUploader"] {
-  padding: 1rem;
-
+    padding: 1rem;
+    background: var(--panel);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 14px;
 }
-div[data-testid="stFileUploader"] label {
-  font-weight: 600;
-  color: var(--text);
+div[data-testid="stFileUploader"] section {
+    background: rgba(0,0,0,0.2);
+    border: 2px dashed var(--muted);
+    border-radius: 14px;
 }
-div[data-testid="stFileUploader"] button {
-  background: var(--panel) !important;
-  color: var(--text) !important;
-  border: 1px solid rgba(255,255,255,0.15) !important;
-  border-radius: 10px !important;
-  padding: 0.6rem 1rem !important;
-  font-weight: 600 !important;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.35) !important;
-  transition: background .2s ease, transform .1s ease;
+div[data-testid="stFileUploader"] section button {
+    background-color: var(--panel);
+    color: var(--muted);
+    border: 1px solid var(--muted);
 }
-
-div[data-testid="stFileUploader"] button:hover {
-  background: rgba(255,255,255,0.1) !important;
-  transform: translateY(-1px);
-}
-
-div[data-testid="stFileUploader"] button:active {
-  background: rgba(255,255,255,0.2) !important;
-  transform: translateY(1px);
-}
-
-/* Status messages */
-.stAlert {
-  border-radius: 12px;
-  border: 1px solid rgba(255,255,255,0.08);
-}
-
-/* Dataframe: dark, compact */
-[data-testid="stTable"], [data-testid="stDataFrame"] {
-  overflow: hidden;
-}
-[data-testid="stDataFrame"] div[role="table"] {
-  color: var(--text);
-}
-[data-testid="stDataFrame"] .css-1kz0wi6,  /* header cells (Streamlit internal class may change) */
-[data-testid="stDataFrame"] .index_name {
-  background: rgba(255,255,255,0.04) !important;
-}
-[data-testid="stDataFrame"] th, [data-testid="stDataFrame"] td {
-  border-color: rgba(255,255,255,0.08) !important;
-}
-[data-testid="StyledDataFrame"] {
-  font-size: 0.92rem;
-}
-
-/* Download button */
-[data-testid="baseButton-secondary"] {
-  background: transparent !important;
-  color: var(--text) !important;
-  border: 1px solid rgba(255,255,255,0.12) !important;
-  border-radius: 10px !important;
-}
-
 </style>
 """
 st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
@@ -192,17 +100,16 @@ def load_model():
     return model
 
 # -------------------------------
-# Analysis
+# Analysis Function
 # -------------------------------
 def find_similar_work_order_pairs(df, model):
+    # (Your analysis function remains unchanged here)
     desc_column = "Description"
     wo_number_column = "Work Order Number"
     status_column = "Status"
     location_column = "Location"
     asset_column = "Asset"
-    classification_column = "Classification"
     pm_number_column = "PM Number"
-
     statuses_to_exclude = ["COMP", "CAN"]
     similarity_threshold = 0.75
 
@@ -231,21 +138,13 @@ def find_similar_work_order_pairs(df, model):
     grouped = filtered_df.groupby([location_column, asset_column])
 
     for (location, asset), group_df in grouped:
-        if len(group_df) < 2:
-            continue
-
+        if len(group_df) < 2: continue
         sentences_df = group_df.dropna(subset=[desc_column])
-        if len(sentences_df) < 2:
-            continue
-
+        if len(sentences_df) < 2: continue
         sentences = sentences_df[desc_column].astype(str).tolist()
         work_orders = sentences_df[wo_number_column].tolist()
-
         embeddings = model.encode(sentences, show_progress_bar=False, convert_to_tensor=True)
-        clusters = util.community_detection(
-            embeddings, threshold=similarity_threshold, min_community_size=2
-        )
-
+        clusters = util.community_detection(embeddings, threshold=similarity_threshold, min_community_size=2)
         if clusters:
             for cluster in clusters:
                 for i_pos in range(len(cluster)):
@@ -253,32 +152,29 @@ def find_similar_work_order_pairs(df, model):
                         idx1 = cluster[i_pos]
                         idx2 = cluster[j_pos]
                         score = util.cos_sim(embeddings[idx1], embeddings[idx2])[0, 0].item()
-                        results_data.append(
-                            {
-                                "Similarity Score": f"{score:.4f}",
-                                "Work Order 1": work_orders[idx1],
-                                "Description 1": sentences[idx1],
-                                "Work Order 2": work_orders[idx2],
-                                "Description 2": sentences[idx2],
-                                "Location": location,
-                                "Asset": asset,
-                            }
-                        )
-
+                        results_data.append({
+                            "Similarity Score": f"{score:.4f}",
+                            "Work Order 1": work_orders[idx1],
+                            "Description 1": sentences[idx1],
+                            "Work Order 2": work_orders[idx2],
+                            "Description 2": sentences[idx2],
+                            "Location": location,
+                            "Asset": asset,
+                        })
     if results_data:
         return pd.DataFrame(results_data).sort_values(by="Similarity Score", ascending=False)
     return pd.DataFrame()
 
 # -------------------------------
-# UI
+# UI Layout
 # -------------------------------
-# --- Header Section ---
-
-
-st.title("AI Duplication Model")
-st.write("Upload your file to detect duplicate work orders.")
+col1, col2 = st.columns([1, 5])
+with col1:
+    st.image("https://upload.wikimedia.org/wikipedia/commons/thumb/3/30/Methanex_logo.svg/2560px-Methanex_logo.svg.png", width=150)
+with col2:
+    st.title("AI Duplication Model")
+    st.write("Upload your file to detect duplicate work orders.")
 st.markdown("---")
-
 
 model = load_model()
 
@@ -296,7 +192,7 @@ if uploaded_file is not None and run:
 
     if not results_df.empty:
         st.subheader("Found Similarities")
-        st.dataframe(results_df, use_container_width=True)
+        st.dataframe(results_df, use_container_width=True, hide_index=True)
         csv = results_df.to_csv(index=False).encode("utf-8")
         st.download_button(
             label="Download results as CSV",
@@ -305,4 +201,4 @@ if uploaded_file is not None and run:
             mime="text/csv",
         )
     else:
-        st.warning("No similar work orders were found with the current settings.")
+        st.warning("No similar work orders were found.")
